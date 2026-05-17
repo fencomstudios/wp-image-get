@@ -6,10 +6,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func main() {
 	url := "https://whitherward.com/wp-content/uploads/2017/02/ww_photo_2_dark.jpg"
+	urlSegments := strings.Split(url, "/")
+	fileName := urlSegments[len(urlSegments) - 1]
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Println(fmt.Errorf("request error: %v", err))
@@ -29,7 +33,7 @@ func main() {
 
 	fmt.Println("Content type is: " + http.DetectContentType(data))
 
-	fileErr := os.WriteFile("./ww_photo_2_dark.jpg", data, 0666)
+	fileErr := os.WriteFile("./downloads/" + fileName, data, 0666)
 	if fileErr != nil {
 		log.Fatal(err)
 	}
