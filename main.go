@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -26,4 +28,9 @@ func main() {
 	}
 
 	fmt.Println("Content type is: " + http.DetectContentType(data))
+
+	fileErr := os.WriteFile("./ww_photo_2_dark.jpg", data, 0666)
+	if fileErr != nil {
+		log.Fatal(err)
+	}
 }
