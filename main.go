@@ -6,11 +6,15 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+)
+
+const (
+	LO_RATE int = 1
+	HI_RATE int = 60
 )
 
 //type ImageURL struct {
@@ -18,6 +22,7 @@ import (
 //}
 
 func getImage(url string) {
+
 	urlSegments := strings.Split(url, "/")
 	fileName := urlSegments[len(urlSegments) - 1]
 
@@ -40,35 +45,64 @@ func getImage(url string) {
 
 	fmt.Println("Content type is: " + http.DetectContentType(data))
 
-	fileErr := os.WriteFile("./downloads/" + fileName, data, 0666)
-	if fileErr != nil {
-		log.Fatal(err)
+	if err := os.WriteFile("./downloads/" + fileName, data, 0666); err != nil {
+		fmt.Printf("file write error: %v\n", err)
 	}
 
-	time.Sleep(3 * time.Second)
+	fmt.Println("File downloaded successfully")
+
 }
 
-func getFilename() (string) {
-	for {
-		fmt.Print("Please enter the filename of the Wordpress Image Export XML: ")
-		inputReader := bufio.NewReader(os.Stdin)
-		inputString, err := inputReader.ReadString('\n')
-		if err != nil {
-			fmt.Printf("file path error: %v\n", err)
-		} else {
-			return inputString
-		}
+func getFilename(reader *bufio.Reader) (string) {
+
+	fmt.Print("Please enter the filename of the Wordpress Image Export XML, or the full path if file is not in the current working directory: ")
+	inputString, err := reader.ReadString('\n')
+	fmt.Printf("%v", inputString)
+
+	if err != nil {
+		fmt.Printf("file path error: %v\n", err)
 	}
+	return strings.Trim(inputString, "\n")
 }
 
 func main() {
 
-	//xmlFile, err := os.ReadFile(getFilename())
-	xmlFile, err := os.ReadFile("whitherward.WordPress.2026-05-17.xml")
-	if err != nil {
-		fmt.Println(fmt.Errorf("xml file error: %v", err))
+	//get file and rate info
+	downRate := 0
+	var xmlPath string
+	var xmlFile []byte
+	inputReader := bufio.NewReader(os.Stdin)
+	
+	for {
+		xmlPath = getFilename(inputReader)
+		t, err := os.ReadFile(xmlPath)
+		if err != nil {
+			fmt.Println(fmt.Errorf("xml file error: %v", err))
+			continue
+		}
+		xmlFile = t
+		break
 	}
 
+	for {
+		fmt.Print("Enter a time between downloads in seconds (min 1, max 60): ")
+		_, err := fmt.Scan(&downRate)
+		if err != nil {
+			fmt.Printf("input error: %v\n", err)
+			continue
+		}
+		
+		if downRate < LO_RATE {
+			fmt.Println("invalid rate")
+			continue
+		} else if downRate > HI_RATE {
+			fmt.Println("invalid rate")
+			continue
+		} else {
+			fmt.Printf("seconds of delay: %v\n", downRate)
+			break
+		}
+	}
 
 	xmlBuffer := bytes.NewBuffer(xmlFile)
 	decoder := xml.NewDecoder(xmlBuffer)
@@ -94,6 +128,7 @@ func main() {
 			if foundGUID == true {
 				address := strings.TrimSpace(string(t))
 				fmt.Printf("Image address: %v\n", address)
+				time.Sleep(time.Duration(downRate) * time.Second)
 				getImage(address)
 				foundGUID = false
 			}
