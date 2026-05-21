@@ -53,28 +53,44 @@ func getImage(url string) {
 
 }
 
-func getFilename(reader *bufio.Reader) (string) {
-
-	fmt.Print("Please enter the filename of the Wordpress Image Export XML, or the full path if file is not in the current working directory: ")
-	inputString, err := reader.ReadString('\n')
-	fmt.Printf("%v", inputString)
-
-	if err != nil {
-		fmt.Printf("file path error: %v\n", err)
-	}
-	return strings.Trim(inputString, "\n")
-}
-
 func main() {
 
 	//get file and rate info
 	downRate := 0
 	var xmlPath string
 	var xmlFile []byte
-	inputReader := bufio.NewReader(os.Stdin)
-	
+
 	for {
-		xmlPath = getFilename(inputReader)
+		inputReader := bufio.NewReader(os.Stdin)
+		fmt.Print("Please enter the filename of the Wordpress Image Export XML, or the full path if file is not in the current working directory: ")
+		inputString, err := inputReader.ReadString('\n')
+		fmt.Printf("%v\n", inputString)
+
+		if err != nil {
+			fmt.Printf("file path error: %v\n", err)
+			continue
+		}
+		xmlPath = strings.Trim(inputString, "\n")
+		break
+	}
+	
+
+	if err := os.Mkdir("downloads", 0750); err != nil {
+		if strings.Contains(err.Error(), "file exists") {
+			fmt.Println("Downloads directory exists")
+		} else {
+			fmt.Printf("directory creation error: %v\n", err)
+		}
+	} else {
+		fmt.Println("Downloads directory does not exist; will be created")
+	}
+	
+	fileList, err := os.ReadDir("./downloads")
+	if err != nil {
+		fmt.Printf("directory read error: %v\n", err)
+	}
+
+	for {
 		t, err := os.ReadFile(xmlPath)
 		if err != nil {
 			fmt.Println(fmt.Errorf("xml file error: %v", err))
@@ -107,7 +123,7 @@ func main() {
 	xmlBuffer := bytes.NewBuffer(xmlFile)
 	decoder := xml.NewDecoder(xmlBuffer)
 
-	foundGUID := false
+	foundGUID, fileExists := false, false
 
 	for {
 		token, err := decoder.Token()
@@ -128,9 +144,28 @@ func main() {
 			if foundGUID == true {
 				address := strings.TrimSpace(string(t))
 				fmt.Printf("Image address: %v\n", address)
-				time.Sleep(time.Duration(downRate) * time.Second)
+				urlSegments := strings.Split(address, "/")
+				fileName := urlSegments[len(urlSegments) - 1]
+				for _, f := range fileList {
+					check, err := f.Info()
+					if err != nil {
+						fmt.Printf("file info error: %v\n", err)
+					}
+					if check.Name() == fileName {
+						fmt.Println("File exists, skipping")
+						fileExists = true
+						break
+					}
+				}
+
+				if fileExists {
+					foundGUID, fileExists = false, false
+					continue
+				}
 				getImage(address)
-				foundGUID = false
+				time.Sleep(time.Duration(downRate) * time.Second)
+				
+				foundGUID, fileExists = false, false
 			}
 		}
 	}
