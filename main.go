@@ -45,7 +45,7 @@ func getImage(url string) {
 
 	fmt.Println("Content type is: " + http.DetectContentType(data))
 
-	if err := os.WriteFile("./downloads/" + fileName, data, 0666); err != nil {
+	if err := os.WriteFile("./downloads/" + fileName, data, 0744); err != nil {
 		fmt.Printf("file write error: %v\n", err)
 	}
 
@@ -75,7 +75,7 @@ func main() {
 	}
 	
 
-	if err := os.Mkdir("downloads", 0750); err != nil {
+	if err := os.Mkdir("downloads", 0744); err != nil {
 		if strings.Contains(err.Error(), "file exists") {
 			fmt.Println("Downloads directory exists")
 		} else {
